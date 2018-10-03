@@ -17,7 +17,7 @@ const TableHeader = () => {
 const TableBody = props => {
   const rows = props.data.map((row, index) => {
     return (
-      <tr key={index}><td>{moment(row.timestamp).format()}</td><td>{row.latitude}</td><td>{row.longitude}</td><td>{row.temperature}</td></tr>
+      <tr key={index}><td>{moment(row.timestamp).format()}</td><td>{row.coordinates[0]}</td><td>{row.coordinates[1]}</td><td>{row.temperature}</td></tr>
     )
   })
   return <tbody>{rows}</tbody>

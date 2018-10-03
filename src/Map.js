@@ -1,55 +1,86 @@
 import React, { PureComponent } from 'react';
-import Leaflet from 'leaflet';
-import Map from 'pigeon-maps';
-import Marker from 'pigeon-marker';
-import gmap from './gmaps.png';
+import MapGL from 'react-map-gl';
+import DeckGL, { ScatterplotLayer } from 'deck.gl';
 
-const markers = [
-  {
-    name: 'Kottbusser Tor',
-    latlng: [52.499040, 13.418392]
-  }, {
-    name: 'Görlitzer Park',
-    latlng: [52.496912, 13.436738]
-  }, {
-    name: 'webkid',
-    latlng: [52.501106, 13.422061]
-  }
-];
-
+const mapbox_token = 'pk.eyJ1IjoicmFuZG9tc2hpbmljaGkiLCJhIjoiY2ptbTJ0MmhuMGI1djN2bnUyN2xiMmRuOCJ9.0a1Zsdrz8NOagQvtVB2_qQ'
 const mapConfig = {
-  center: [52.499219, 13.425416],
-  zoom: 8
+  center: [52.540875, 13.438545],
+  zoom: 13
 };
 
-const getProvider = (x, y, z) => `https://cartodb-basemaps-a.global.ssl.fastly.net/light_all/${z}/${x}/${y}.png`;
-
-
 class WhateverMap extends PureComponent {
+  constructor(props) {
+    super(props);
 
-  onMarkerClick(evt) {
-    console.log(evt.payload);
+    this.state = {
+      viewport: {
+        width: 960,
+        height: 600,
+        latitude: mapConfig.center[0],
+        longitude: mapConfig.center[1],
+        zoom: mapConfig.zoom,
+        startDragLngLat: mapConfig.center,
+      },
+    };
+
+    this.onChangeViewport = this.onChangeViewport.bind(this);
+  }
+
+  onChangeViewport(viewport) {
+    this.setState({
+      viewport: { ...this.state.viewport, ...viewport }
+    });
+  }
+
+  initialize(gl) {
+    gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE, gl.ONE_MINUS_DST_ALPHA, gl.ONE);
+    gl.blendEquation(gl.FUNC_ADD);
   }
 
   render() {
-    // create an array with marker components
-    const PigeonMarkers = markers.map(marker => (
-      <Marker key={`marker_${marker.name}`} anchor={marker.latlng} payload={marker.name} onClick={this.onMarkerClick} />
-    ));
+    const { viewport } = this.state;
+    const { data } = this.props;
+
+	const plot_position_layer = new ScatterplotLayer({
+	    id: 'scatterplot-layer',
+	    data,
+	    pickable: true,
+	    opacity: 0.3,
+	    radiusScale: 30,
+	    radiusMinPixels: 1,
+	    radiusMaxPixels: 100,
+	    getPosition: d => [d.coordinates[1], d.coordinates[0]],
+	    getColor: d => {
+        const threshold = 25
+        if(d.temperature >= threshold - 2 && d.temperature < threshold) {
+          return [128,128,0]
+        }
+        else if(d.temperature > threshold) {
+          return [255, 0, 0]
+        }
+        else {
+          return [0, 255, 0]
+        }
+      }
+	})
 
     return (
-      <div className="map">
-        <Map
-          width={960}
-          height={300}
-          defaultCenter={mapConfig.center}
-          defaultZoom={mapConfig.zoom}
-          provider={getProvider}
+      <div className="reactmapgldeckgl">
+        <MapGL
+          {...viewport}
+          mapboxApiAccessToken={mapbox_token}
+          mapStyle="mapbox://styles/mapbox/dark-v9"
+          onChangeViewport={this.onChangeViewport}
         >
-          {PigeonMarkers}
-        </Map>
+          <DeckGL
+            {...viewport}
+            onWebGLInitialized={this.initialize}
+            layers={[plot_position_layer]}
+          />
+        </MapGL>
       </div>
     );
   }
 }
+
 export default WhateverMap;
